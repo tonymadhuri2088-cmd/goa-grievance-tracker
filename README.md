@@ -1,4 +1,4 @@
-> **Goa Grievance Tracker.** This copy is the Goa version of the Kalaburagi Grievance Tracker: follow-up reminders, overdue monitoring, escalation, a communication log, Konkani and English, document upload, the police pilot and a Collectorate dashboard. Read [GOA.md](GOA.md) first for how to run it, the demo script and the honest limits. The rest of this file describes the original Chennai version, whose data pack is still included for the older tests.
+> **Goa Grievance Tracker.** This copy is the Goa version of the Kalaburagi Grievance Tracker: follow-up reminders, overdue monitoring, escalation, a communication log, Konkani and English, document upload, the police pilot, a Collectorate dashboard and a voice helpline (talk to the AI on the /call page, or by phone with Twilio). Read [GOA.md](GOA.md) first for how to run it, the demo script and the honest limits. The rest of this file describes the original Chennai version, whose data pack is still included for the older tests.
 
 # Chennai Kural — Your Voice. A Better Chennai. (unofficial demo)
 

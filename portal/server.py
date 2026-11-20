@@ -50,7 +50,8 @@ from complaint_portal.workers import WorkerDesk  # noqa: E402
 from complaint_portal.sms import ChannelCodes, load_env_file, sender_from_env  # noqa: E402
 from complaint_portal.wa_ai import understanding_from_env  # noqa: E402
 from complaint_portal.wa_bot import WhatsAppBot  # noqa: E402
-from complaint_portal.whatsapp import InboundRejected, channel_from_env  # noqa: E402
+from complaint_portal.voice import Turn, VoiceHelpline, twiml_for  # noqa: E402
+from complaint_portal.whatsapp import InboundRejected, TwilioChannel, channel_from_env, indian_mobile  # noqa: E402
 from complaint_portal.workflow import Portal, PortalError, utcnow  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -67,6 +68,7 @@ PAGES = {
     "/worker": HERE / "worker.html",                # worker board: complaints to accept, allotted tasks
     "/worker/signup": HERE / "worker-signup.html",
     "/share": HERE / "share.html",                  # QR code, link, and how to use three devices
+    "/call": HERE / "call.html",                    # talk to the AI helpline from the browser
     "/about": HERE / "about.html",                  # agents and models, time limits, data
     "/limits": HERE / "limits.html",                # District Head Office: set the days for each complaint type
 }
@@ -95,6 +97,7 @@ WORKER_COOKIE = "worker_session"
 MAX_BODY_BYTES = 20000
 MAX_WEBHOOK_BYTES = 200_000
 WHATSAPP_PATH = "/api/whatsapp"
+VOICE_PHONE_PATH = "/api/voice/twilio"
 MAX_UPLOAD_BYTES = 17_000_000  # a complaint with three 4 MB files, which are sent as text (base64)
 DEFAULT_DB = HERE / "data" / "portal.db"
 DEFAULT_CHECK_SECONDS = 30
@@ -114,6 +117,7 @@ class Handler(BaseHTTPRequestHandler):
     workers: WorkerDesk
     web_dir: Path
     whatsapp: Optional[WhatsAppBot] = None
+    voice: Optional[VoiceHelpline] = None
 
     def do_GET(self):  # noqa: N802 (name required by http.server)
         path = urlsplit(self.path).path
@@ -139,6 +143,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/config":
                 self._send_json(200, self.portal.public_config())
+                return
+            if path == "/api/voice/info":
+                self._send_json(200, {"web": self.voice is not None,
+                                      "phone": (os.environ.get("VOICE_DISPLAY_NUMBER") or "").strip(),
+                                      "language": (os.environ.get("VOICE_LANGUAGE") or "en-IN").strip()})
                 return
             if path == "/api/about":
                 self._send_json(200, about_info(self.portal))
@@ -220,6 +229,12 @@ class Handler(BaseHTTPRequestHandler):
             extra_headers: Dict[str, Any] = {}
             if path == WHATSAPP_PATH:
                 self._whatsapp_message(path)
+                return
+            if path == VOICE_PHONE_PATH:
+                self._voice_phone_call(path)
+                return
+            if path == "/api/voice/turn":
+                self._voice_web_turn()
                 return
             if path == "/api/district/limits":
                 officer = self._current_officer()
@@ -483,6 +498,57 @@ class Handler(BaseHTTPRequestHandler):
         body, content_type = bot.channel.reply_to_webhook()
         self._send_bytes(200, body, content_type)
 
+    # Voice helpline
+
+    def _voice_web_turn(self) -> None:
+        """One turn of a call made from the call page. Only a logged-in citizen, so the caller is known."""
+        mobile = self._current_citizen()
+        if self.voice is None:
+            raise PortalError(404, "The voice helpline is not on.")
+        body = self._read_json()
+        call_id = str(body.get("call_id") or "")
+        if not re.fullmatch(r"[A-Za-z0-9_-]{8,64}", call_id):
+            raise PortalError(400, "Send a call_id of 8 to 64 letters or digits.")
+        call_id = f"web-{mobile}-{call_id}"
+        heard = body.get("heard")
+        if heard is not None and not isinstance(heard, str):
+            raise PortalError(400, "heard must be text.")
+        turn = self.voice.start(mobile, call_id) if body.get("start") else self.voice.turn(mobile, call_id, heard)
+        self._send_json(200, turn.as_dict())
+
+    def _voice_phone_call(self, path: str) -> None:
+        """A phone call from Twilio. Each time the caller speaks, Twilio posts what it heard and waits for our answer."""
+        token = (os.environ.get("TWILIO_AUTH_TOKEN") or "").strip()
+        if self.voice is None or not token:
+            self._send_json(404, {"error": "Not found."})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if not 0 < length <= MAX_WEBHOOK_BYTES:
+            self._send_json(413 if length > MAX_WEBHOOK_BYTES else 400, {"error": "Bad request."})
+            return
+        raw = self.rfile.read(length)
+        params = {key: values[0] for key, values in parse_qs(raw.decode("utf-8", "replace"), keep_blank_values=True).items()}
+        checker = TwilioChannel("", token, "", (os.environ.get("PUBLIC_URL") or "").strip())
+        headers = {key.lower(): value for key, value in self.headers.items()}
+        given = headers.get("x-twilio-signature", "")
+        expected = checker.expected_signature(checker.public_address(path, headers), params)
+        if not given or not hmac.compare_digest(given, expected):
+            print("Voice webhook refused: bad signature. Set PUBLIC_URL to the address in the Twilio console.")
+            self._send_json(403, {"error": "Refused."})
+            return
+        language = (os.environ.get("VOICE_LANGUAGE") or "en-IN").strip()
+        mobile = indian_mobile(params.get("From", ""))
+        call_id = "tw-" + re.sub(r"[^A-Za-z0-9]", "", params.get("CallSid", ""))[:60]
+        if mobile is None or len(call_id) < 8:
+            turn = Turn(["Sorry, this helpline works for Indian mobile numbers only. Goodbye."], end=True)
+        else:
+            heard = params.get("SpeechResult") or params.get("Digits") or ""
+            turn = self.voice.turn(mobile, call_id, heard)
+        self._send_bytes(200, twiml_for(turn, path, language), "text/xml; charset=utf-8")
+
     # Helpers
 
     def _send_app_file(self, relative: str) -> None:
@@ -630,7 +696,8 @@ def _cookie(token: str, max_age: int, name: str = COOKIE_NAME) -> str:
 def make_server(host: str, port: int, portal: Portal, sessions: Sessions,
                 citizen_sessions: Optional[Sessions] = None, web_dir: Optional[Path] = None,
                 worker_sessions: Optional[Sessions] = None,
-                whatsapp: Optional[WhatsAppBot] = None) -> ThreadingHTTPServer:
+                whatsapp: Optional[WhatsAppBot] = None,
+                voice: Optional[VoiceHelpline] = None) -> ThreadingHTTPServer:
     """Create the server without starting it. Tests use port 0 to get a free port."""
     bound = type("BoundHandler", (Handler,), {
         "portal": portal,
@@ -640,6 +707,7 @@ def make_server(host: str, port: int, portal: Portal, sessions: Sessions,
         "workers": WorkerDesk(portal),
         "web_dir": web_dir or WEB_DIR,
         "whatsapp": whatsapp,
+        "voice": voice,
     })
     return ThreadingHTTPServer((host, port), bound)
 
@@ -718,8 +786,9 @@ def main() -> None:
         if digits:
             join = (os.environ.get("WHATSAPP_JOIN_TEXT") or "Hi").strip()
             portal.whatsapp_info = {"number": "+" + digits, "link": f"https://wa.me/{digits}?text={quote(join)}"}
+    voice = VoiceHelpline(portal, understanding_from_env())
     httpd = make_server(args.host, args.port, portal, sessions, Sessions(store, "citizen"),
-                        worker_sessions=Sessions(store, "worker"), whatsapp=bot)
+                        worker_sessions=Sessions(store, "worker"), whatsapp=bot, voice=voice)
     start_overdue_check(portal, args.check_seconds)
     saver.start()
     public = (os.environ.get("PUBLIC_URL") or "").strip()
@@ -735,6 +804,9 @@ def main() -> None:
     else:
         print("SMS is not set up: codes are shown on screen. See .env.example to send them by SMS.")
     print(whatsapp_note)
+    print("Voice helpline: on the /call page for logged-in citizens." + (
+        " Phone calls: POST " + VOICE_PHONE_PATH + " (Twilio Voice)." if os.environ.get("TWILIO_AUTH_TOKEN") else
+        " Phone calls are off (no TWILIO_AUTH_TOKEN)."))
     if bot is not None:
         print("Claude understands free-text WhatsApp messages." if bot.understanding else
               "No ANTHROPIC_API_KEY: WhatsApp messages are understood by keywords and menus.")

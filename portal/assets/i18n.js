@@ -30,6 +30,7 @@
     "Home": "मुखेल पान",
     "Register Complaint": "तक्रार नोंद करात",
     "Track Complaint": "तक्रारीचो मागोवो",
+    "Call Helpline": "हेल्पलायनीक फोन करात",
     "Services": "सेवा",
     "How It Works": "हें कशें चलता",
     "Your account": "तुमचें खातें",

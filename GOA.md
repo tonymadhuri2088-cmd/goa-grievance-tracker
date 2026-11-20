@@ -118,6 +118,36 @@ Things to know:
 - Cost: the bot uses the small, cheap model by default and stops after `WHATSAPP_AI_DAILY_LIMIT` calls a day (300).
 - The bot's Konkani is a first draft, like the rest. Have a Konkani speaker read `complaint_tools/complaint_portal/wa_bot.py`.
 
+## Voice helpline: a citizen talks, the AI answers (optional)
+
+A citizen can report a problem by talking. The assistant greets them, listens, asks for what is missing (name, taluka,
+ward and address the first time), reads the complaint back, registers it and says the complaint ID. It can also read out
+the status of a complaint. It uses the same steps and the same fixed texts as the WhatsApp bot (`complaint_portal/voice.py`
+turns speech into the bot's messages and the bot's texts into spoken lines), so the department, the time limit and the
+complaint ID come from the same code as on the website. A model only helps to understand a free-text problem (set
+`ANTHROPIC_API_KEY`); without it, keywords and the menu do that.
+
+Two ways to call:
+
+1. **The call page, `/call` (works now, nothing to set up).** A logged-in citizen presses Start call. The browser listens
+   and speaks (Chrome or Edge). If the browser cannot listen, the page falls back to typing, and still speaks the answers.
+2. **A real phone number (needs a Twilio account with a Voice number).** In the Twilio console, set the number's voice
+   webhook to `POST https://<your-site>/api/voice/twilio`. On Render set `TWILIO_AUTH_TOKEN` (the same token as for
+   WhatsApp) and `PUBLIC_URL`. Optional: `VOICE_LANGUAGE` (default `en-IN`) and `VOICE_DISPLAY_NUMBER` (shown on the call
+   page). Twilio turns the caller's speech into text and the reply into speech; each request is checked with Twilio's
+   signature. The caller is known from the phone network, so there is no login. Only Indian numbers are served.
+   Getting an Indian inbound number needs business verification from the provider, so for a demo, call a number you
+   own (a verified caller on a trial account) or use the call page.
+
+Honest limits, to say if asked:
+
+- Speech recognition for **Konkani is not available** from browsers or Twilio. Hindi recognition reads Devanagari
+  approximately. English works well; the Konkani spoken lines are a first draft.
+- A call carries **no photos**. The photo step is skipped for the caller, and a complaint registered by voice has none.
+- A browser demo proves the idea, not the phone network. Phone accuracy depends on the line and the accent.
+- Anyone on the call page must be logged in as a citizen, so the caller is known. A number typed into a page is never
+  trusted.
+
 ## Demo script (5 minutes)
 
 Start the server with `--demo-minutes 2` and have two browser windows ready: one logged in as a citizen, one as `district.head`. Sign the citizen up beforehand (name, mobile 9876543210, any address in Goa).
