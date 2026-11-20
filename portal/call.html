@@ -24,6 +24,19 @@
   .call-type { display: flex; gap: 10px; margin-top: 14px; }
   .call-type input { flex: 1; min-width: 0; }
   .call-note { font-size: 13.5px; color: var(--label); margin-top: 14px; }
+  .call-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+  @media (max-width: 880px) { .call-grid { grid-template-columns: minmax(0, 1fr); } }
+  .answer-card .form-body { display: block; }
+  .answer-empty { color: var(--label); line-height: 1.5; margin: 0; }
+  .answer-block { margin: 0 0 16px; }
+  .answer-block .k { display: block; font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .answer-block .v { display: block; line-height: 1.45; color: var(--navy); overflow-wrap: anywhere; }
+  .answer-block .v.quote { background: #fbfdff; border-left: 4px solid #9aa8ba; padding: 8px 12px; border-radius: 0 8px 8px 0; color: #14532d; }
+  .answer-days { background: #eaf6ee; border: 1px solid #b7dfc3; border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; }
+  .answer-days .big { display: block; font-size: 24px; font-weight: 800; color: #14532d; line-height: 1.2; }
+  .answer-days .sub { display: block; margin-top: 4px; color: #14532d; }
+  .answer-id { font-size: 18px; font-weight: 800; letter-spacing: .02em; }
+  .answer-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -61,7 +74,7 @@
   </div>
 </section>
 
-<main class="container">
+<main class="container call-grid">
   <section class="form-card call-card">
     <div class="form-head">
       <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#search"/></svg>
@@ -77,6 +90,7 @@
         <button type="button" class="btn" id="startButton">Start call</button>
         <button type="button" class="btn danger" id="endButton" hidden>End call</button>
         <button type="button" class="btn outline" id="micButton" hidden>Speak now</button>
+        <button type="button" class="btn outline" id="repeatButton" hidden>Hear that again</button>
       </div>
       <form class="call-type" id="typeForm" hidden>
         <input id="typed" type="text" maxlength="600" autocomplete="off" placeholder="Type what you would say" aria-label="Type what you would say">
@@ -87,6 +101,19 @@
     </div>
     <p class="form-foot">Speech is turned into text by your browser (Chrome or Edge work best). English works well. Konkani speech recognition is not available in browsers, so Hindi recognition is used for Devanagari, which is only approximate.</p>
   </section>
+
+  <aside class="form-card answer-card" aria-labelledby="answerTitle">
+    <div class="form-head">
+      <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#search"/></svg>
+      <div>
+        <h2 id="answerTitle">My complaint and the answer</h2>
+        <p>What you told the assistant, and what it will do.</p>
+      </div>
+    </div>
+    <div class="form-body" id="answer" aria-live="polite">
+      <p class="answer-empty" id="answerEmpty">Nothing yet. Start the call and tell the assistant your problem. Your complaint, its ID, and how many days it should take will show here, and the assistant will say them out loud.</p>
+    </div>
+  </aside>
 </main>
 
 <script src="/assets/portal.js"></script>
@@ -101,6 +128,8 @@
   let active = false;
   let listening = null;
   let lastLang = "en";
+  let lastSaid = [];          // what the assistant said last, for "Hear that again"
+  const emptyNote = $("answerEmpty");   // kept, because the panel is cleared when a complaint is shown
 
   function setState(text, dot) {
     $("state").textContent = text;
@@ -119,6 +148,51 @@
     line.append(label, body);
     $("log").append(line);
     $("log").scrollTop = $("log").scrollHeight;
+  }
+
+  function block(label, value, extra) {
+    const wrap = document.createElement("div");
+    wrap.className = "answer-block";
+    const k = document.createElement("span");
+    k.className = "k";
+    k.textContent = label;
+    const v = document.createElement("span");
+    v.className = "v" + (extra ? " " + extra : "");
+    v.textContent = value;
+    wrap.append(k, v);
+    return wrap;
+  }
+
+  function showComplaint(c) {
+    const box = $("answer");
+    box.replaceChildren();
+    box.append(block(c.kind === "track" ? "Complaint you asked about" : "Your complaint", c.problem || "(no description)", "quote"));
+    box.append(block(c.kind === "track" ? "Complaint ID" : "Complaint registered. ID", c.id, "answer-id"));
+    if (c.days !== null && c.days !== undefined && c.due) {
+      const when = document.createElement("div");
+      when.className = "answer-days";
+      const big = document.createElement("span");
+      big.className = "big";
+      big.textContent = c.days <= 1 ? "Within 1 day" : "Within " + c.days + " days";
+      const sub = document.createElement("span");
+      sub.className = "sub";
+      sub.textContent = "Time limit: " + c.due + (c.overdue ? " (passed, it will move to the next office)" : "");
+      when.append(big, sub);
+      box.append(when);
+    }
+    const kind = [c.type, c.category].filter(Boolean).join(" / ");
+    if (kind) box.append(block("Type", kind));
+    if (c.department) box.append(block("Department", c.department));
+    if (c.office) box.append(block("Sent to", c.office));
+    if (c.status_text) box.append(block("Status", c.status_text));
+    const actions = document.createElement("div");
+    actions.className = "answer-actions";
+    const link = document.createElement("a");
+    link.className = "btn outline";
+    link.href = "/track";
+    link.textContent = "Track this complaint";
+    actions.append(link);
+    box.append(actions);
   }
 
   function showError(message) {
@@ -167,7 +241,10 @@
   async function handle(reply) {
     if (!reply || !active) return;
     lastLang = reply.lang;
+    lastSaid = reply.say.slice();
+    $("repeatButton").hidden = false;
     for (const line of reply.say) addLine("AI", line);
+    if (reply.complaint) showComplaint(reply.complaint);
     await speak(reply.say, reply.lang);
     if (!active) return;
     if (reply.end) { endCall(false); return; }
@@ -189,8 +266,17 @@
     if (active) setState("Type your reply below, or press Speak now", "live");
   }
 
+  // Stop the microphone on purpose. The browser then reports "ended", which must not be taken for the caller being silent.
+  function stopListening() {
+    if (!listening) return;
+    listening.stopped = true;
+    try { listening.abort(); } catch (error) { /* already stopped */ }
+    listening = null;
+  }
+
   function listen() {
     if (!active) return;
+    stopListening();
     $("typed").focus();
     $("micButton").hidden = true;
     if (!Recognition || !micOk) { typedMode(""); return; }
@@ -214,8 +300,8 @@
                         : "This browser could not listen (" + event.error + "). Type your reply below.");
     };
     recognition.onend = () => {
-      listening = null;
-      if (got || failed || !active) return;
+      if (listening === recognition) listening = null;
+      if (recognition.stopped || got || failed || !active) return;
       // Ending at once with nothing heard is a failure to listen, not silence. Ending after a while is silence.
       if (Date.now() - began < 600) { typedMode("This browser could not listen. Type your reply below."); return; }
       heard("");
@@ -231,6 +317,9 @@
     callId = newCallId();
     active = true;
     micOk = true;
+    lastSaid = [];
+    $("repeatButton").hidden = true;
+    $("answer").replaceChildren(emptyNote);
     $("startButton").hidden = true;
     $("endButton").hidden = false;
     $("typeForm").hidden = false;
@@ -241,14 +330,15 @@
   function endCall(say) {
     if (!active && !say) return;
     active = false;
-    if (listening) { try { listening.abort(); } catch (error) { /* already stopped */ } listening = null; }
+    stopListening();
     if (synth) synth.cancel();
     $("startButton").hidden = false;
     $("startButton").textContent = "Call again";
     $("endButton").hidden = true;
     $("typeForm").hidden = true;
     $("micButton").hidden = true;
-    setState("Call ended", "");
+    $("repeatButton").hidden = true;
+    setState("Call ended. Your complaint stays on the right.", "");
   }
 
   $("startButton").addEventListener("click", startCall);
@@ -256,15 +346,22 @@
   $("micButton").addEventListener("click", () => {
     micOk = true;
     Portal.say("error", "");
+    stopListening();
     if (synth) synth.cancel();
     listen();
+  });
+  $("repeatButton").addEventListener("click", async () => {
+    if (!active || !lastSaid.length) return;
+    stopListening();
+    await speak(lastSaid, lastLang);
+    if (active) listen();
   });
   $("typeForm").addEventListener("submit", (event) => {
     event.preventDefault();
     const text = $("typed").value.trim();
     $("typed").value = "";
     if (!text || !active) return;
-    if (listening) { try { listening.abort(); } catch (error) { /* already stopped */ } }
+    stopListening();
     if (synth) synth.cancel();
     heard(text);
   });

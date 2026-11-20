@@ -111,6 +111,15 @@ def test_the_whatsapp_only_lines_are_not_read_out():
     assert "(" not in speakable("Send your complaint ID (for example CMP-20261110-1234).")
 
 
+def test_the_time_limit_is_said_in_days_not_as_a_clock_time():
+    assert "Action expected by" not in speakable("Done.\nAction expected by: 13 Nov 2026, 5:30 PM\nMore.")
+    now = datetime(2026, 11, 10, 9, 0, tzinfo=timezone.utc)
+    from complaint_portal.voice import days_left
+    assert days_left("2026-11-13T12:00:00+00:00", now) == 4      # a part of a day counts as a day
+    assert days_left("2026-11-11T09:00:00+00:00", now) == 1
+    assert days_left("2026-11-01T09:00:00+00:00", now) == 0 and days_left(None, now) is None
+
+
 # ------------------------------------------------------------------ a whole call
 def test_a_new_caller_registers_a_complaint_by_talking(helpline, portal):
     greeting = helpline.start(MOBILE, "call-0001")
@@ -133,6 +142,13 @@ def test_a_new_caller_registers_a_complaint_by_talking(helpline, portal):
     complaints = portal.citizen_complaints(MOBILE)
     assert len(complaints) == 1 and complaints[0]["status"] == "open"
     assert "water" in json.dumps(complaints[0]).lower()
+    # The caller is told how long it should take, and the page gets the complaint for its side panel.
+    assert re.search(r"resolved within \d+ days?, by \d+ \w+ 2026", text) and "Action expected by" not in text
+    panel = reply.complaint
+    assert panel["id"] == complaints[0]["id"] and panel["kind"] == "new" and panel["days"] >= 1
+    assert "no water" in panel["problem"] and panel["type"] and panel["office"] and panel["due"]
+    assert reply.as_dict()["complaint"]["id"] == panel["id"]
+    assert talk(helpline, "goodbye").complaint is None
 
 
 def test_the_caller_can_track_a_complaint_by_saying_its_id(helpline, portal):
@@ -146,6 +162,8 @@ def test_the_caller_can_track_a_complaint_by_saying_its_id(helpline, portal):
     reply = talk(helpline, f"C M P {digits}")
     assert "Drinking water" in " ".join(reply.lines) or "water" in " ".join(reply.lines).lower()
     assert "C M P." in " ".join(reply.lines)
+    assert reply.complaint["kind"] == "track" and reply.complaint["id"] == complaint_id
+    assert not any("resolved within" in line for line in reply.lines)   # tracking is not a new promise
 
 
 def test_goodbye_ends_the_call(helpline):

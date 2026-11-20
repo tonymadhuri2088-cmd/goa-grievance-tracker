@@ -21,12 +21,15 @@ Limits, stated plainly: speech recognition for Konkani is not available from eit
 Devanagari, which is the closest), so English is the language that works well. The Konkani lines are a first draft.
 """
 
+import math
 import re
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from complaint_portal.messages import when_text
 from complaint_portal.whatsapp import Inbound
 from complaint_portal.workflow import utcnow
 
@@ -54,6 +57,13 @@ MORE = {"en": "Is there anything else? Say goodbye to end the call.",
         "kok": "आनीक कांय जाय? सोंपयतकच बाय म्हणात."}
 BYE = {"en": "Thank you for calling. Goodbye.", "kok": "फोन केल्याखातीर धन्यवाद. बाय."}
 NOT_HEARD = {"en": "I did not hear anything. Please say that again.", "kok": "म्हाका कांयच आयकूं आयलें ना. परत सांगात."}
+# Said after a complaint is registered: how long it should take. {days} is a whole number, {date} is like "13 Nov 2026".
+DAYS_LINE = {
+    "en": {"many": "It should be resolved within {days} days, by {date}.",
+           "one": "It should be resolved within 1 day, by {date}."},
+    "kok": {"many": "ही तक्रार {days} दिसांभितर, {date} पयलीं, सोडोवपाची आसा.",
+            "one": "ही तक्रार 1 दिसाभितर, {date} पयलीं, सोडोवपाची आसा."},
+}
 NO_ANSWER_BYE = {"en": "I still cannot hear you. Please call again. Goodbye.",
                  "kok": "म्हाका अजून आयकूं येना. कृपा करून परत फोन करात. बाय."}
 TOO_LONG_BYE = {"en": "This call has gone on for long. Please call again if you need more help. Goodbye.",
@@ -78,9 +88,21 @@ class Turn:
     lines: List[str]
     end: bool = False
     lang: str = "en"
+    complaint: Optional[Dict[str, Any]] = None   # the complaint just registered or looked up, for the call page's side panel
 
     def as_dict(self) -> Dict[str, Any]:
-        return {"say": self.lines, "end": self.end, "lang": self.lang}
+        return {"say": self.lines, "end": self.end, "lang": self.lang, "complaint": self.complaint}
+
+
+def days_left(deadline: Optional[str], now: datetime) -> Optional[int]:
+    """Whole days from now to the time limit, counting a part of a day as a day. None if there is no time limit."""
+    if not deadline:
+        return None
+    try:
+        due = datetime.fromisoformat(deadline)
+    except ValueError:
+        return None
+    return max(0, math.ceil((due - now).total_seconds() / 86400))
 
 
 class QuietChannel:
@@ -185,6 +207,7 @@ def speakable(text: str) -> str:
     text = re.sub(r"\b(Send|Reply with|Reply|Write)\b", "Say", text)
     text = re.sub(r"\b(send|reply with|write)\b", "say", text)
     text = text.replace("Say 0 any time to come back to this menu.", "")
+    text = re.sub(r"(?m)^\s*Action expected by:.*$\n?", "", text)   # said as "within N days" instead (VoiceHelpline)
     # The WhatsApp texts say "I will message you here"; on a call the updates are on the website.
     text = re.sub(r"I will message you here at each step\.\s*Say the ID any time to see the status\.",
                   "You can follow each step on the website, or call again and say track.", text)
@@ -210,6 +233,7 @@ class VoiceHelpline:
             bot = WhatsAppBot(portal, QuietChannel(), understanding, clock=clock, background=False)
         self.bot = bot
         self.portal = portal
+        self.clock = clock
         self._calls: Dict[str, Dict[str, Any]] = {}
         self._guard = threading.Lock()
 
@@ -239,7 +263,10 @@ class VoiceHelpline:
             return Turn([TOO_LONG_BYE[lang]], end=True, lang=lang)
         if text.lower() in END_WORDS:
             return Turn([BYE[lang]], end=True, lang=lang)
-        replies = self._ask(mobile, call_id, understood(text, self._step(mobile)))
+        before = {row["id"] for row in self.portal.store.list_complaints("citizen_contact = ?", (mobile,))}
+        was_tracking = self._step(mobile) == "track_id"
+        heard_as = understood(text, self._step(mobile))
+        replies = self._ask(mobile, call_id, heard_as)
         # A call cannot take photos: where the bot asks for them, answer "skip" for the caller.
         guard = 0
         while self._step(mobile) == "reg_photos" and guard < 3:
@@ -249,13 +276,51 @@ class VoiceHelpline:
         lines = []
         for reply in replies:
             lines.append(MENU[lang] if _is_menu(reply) else speakable(reply))
+        complaint = self._complaint_for_panel(mobile, before, heard_as if was_tracking else None, lang)
+        if complaint and complaint.get("answer"):
+            lines.append(complaint["answer"])
         if self._step(mobile) is None and replies and not any(_is_menu(reply) for reply in replies):
             lines.append(MORE[lang])
         if not lines:
             lines.append(NOT_HEARD[lang])
-        return Turn(lines, lang=lang)
+        return Turn(lines, lang=lang, complaint=complaint)
 
     # ------------------------------------------------------------------ helpers
+
+    def _complaint_for_panel(self, mobile: str, before: set, tracked: Optional[str], lang: str) -> Optional[Dict[str, Any]]:
+        """The complaint this turn registered (or the one the caller asked about), with the time it should take."""
+        rows = self.portal.store.list_complaints("citizen_contact = ?", (mobile,))
+        row = next((r for r in rows if r["id"] not in before), None)
+        kind = "new"
+        if row is None and tracked:
+            found = re.search(r"CMP-\d{8}-\d+", tracked)
+            row = next((r for r in rows if found and r["id"] == found.group(0)), None)
+            kind = "track"
+        if row is None:
+            return None
+        now = self.clock()
+        summary = self.portal._summary(row, now)      # pylint: disable=protected-access
+        days = days_left(row["stage_deadline"], now) if row["status"] == "open" else None
+        date = when_text(row["stage_deadline"]) if row["stage_deadline"] and row["status"] == "open" else None
+        answer = None
+        if kind == "new" and days is not None and date:
+            words = DAYS_LINE[lang]
+            answer = (words["one"] if days <= 1 else words["many"]).format(days=days, date=date.split(",")[0])
+        return {
+            "kind": kind,
+            "id": row["id"],
+            "problem": (row["complaint_text"] or "")[:400],
+            "type": summary["complaint_label"],
+            "category": summary.get("category_label") or "",
+            "department": summary["field"],
+            "office": summary["current_office"],
+            "status": row["status"],
+            "status_text": summary["status_text"],
+            "days": days,
+            "due": date,
+            "overdue": bool(summary["overdue"]),
+            "answer": answer,
+        }
 
     def _ask(self, mobile: str, call_id: str, text: str) -> List[str]:
         call = self._calls[call_id]

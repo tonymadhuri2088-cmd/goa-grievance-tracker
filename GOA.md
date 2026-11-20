@@ -127,6 +127,10 @@ turns speech into the bot's messages and the bot's texts into spoken lines), so 
 complaint ID come from the same code as on the website. A model only helps to understand a free-text problem (set
 `ANTHROPIC_API_KEY`); without it, keywords and the menu do that.
 
+After a complaint is registered the assistant also says how long it should take ("within 3 days, by 23 Nov 2026"; the
+days are counted from the stored time limit), and the call page shows the caller's words, the complaint ID, the type,
+the office and the days in a side panel, "My complaint and the answer". The caller can press "Hear that again".
+
 Two ways to call:
 
 1. **The call page, `/call` (works now, nothing to set up).** A logged-in citizen presses Start call. The browser listens
