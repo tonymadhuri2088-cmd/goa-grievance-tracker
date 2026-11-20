@@ -1,0 +1,33 @@
+# Render Blueprint: one free web service built from the Dockerfile, plus a free Postgres database.
+# On Render: New > Blueprint > pick this repository. Render asks for DEMO_PASSWORD.
+# The free web plan has no disk, so the portal keeps a copy of its data in the Postgres database (DATABASE_URL, see
+# complaint_tools/complaint_portal/durable.py) and restores it after every restart. The free database lasts 30 days.
+# SEED_SAMPLE=1 adds invented demo data the first time only. It is off (0), and each start removes any invented data.
+databases:
+  - name: goa-data
+    plan: free
+    databaseName: portal
+    user: portal
+    ipAllowList: []   # only services inside Render can connect
+services:
+  - type: web
+    name: goa-grievance-tracker
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/config
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: goa-data
+          property: connectionString
+      - key: DEMO_PASSWORD
+        sync: false
+      - key: SEED_SAMPLE
+        value: "0"
+      # 0 = real charter days. Set to 3 to make every time limit 3 minutes so escalation can be shown live.
+      - key: COMPLAINT_PORTAL_DEMO_MINUTES
+        value: "0"
+      # WhatsApp (optional): add these in the Render dashboard, never in this file.
+      # WHATSAPP_PROVIDER=twilio, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM=+14155238886,
+      # PUBLIC_URL=https://<your service>.onrender.com, WHATSAPP_JOIN_TEXT=join <your sandbox word>,
+      # ANTHROPIC_API_KEY (to understand free-text messages).

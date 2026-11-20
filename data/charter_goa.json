@@ -1,0 +1,298 @@
+{
+  "label": "Sample follow-up timelines for the Goa demo. Set by the project team, not an official citizen's charter. Each department must replace them with its own rules before real use.",
+  "district_head_label": "Collectorate (District Head Office)",
+  "fields": {
+    "water": "Drinking water",
+    "roads": "Roads and streetlights",
+    "health": "Health and hospitals",
+    "sanitation": "Sanitation, drains and local taxes",
+    "police": "Police (pilot)",
+    "general": "General grievances"
+  },
+  "stage_order": [
+    "depot",
+    "deputy_ae",
+    "area_engineer",
+    "superintendent_engineer"
+  ],
+  "stage_labels": {
+    "depot": "Section or station-level officer",
+    "deputy_ae": "Sub-division officer",
+    "area_engineer": "Division officer",
+    "superintendent_engineer": "District-level department head",
+    "chief_engineer": "Collectorate (District Head Office)"
+  },
+  "ward_office_label": "Ward or taluka office",
+  "escalation_rule": "Sample rule: each level has its own number of days (they are not added up). After the last level the complaint goes to the Collectorate. A department replaces this with its own rule.",
+  "after_last_level": "If it is still not solved, the complaint goes to the Collectorate (District Head Office).",
+  "escalation_note": "In this sample each level has its own number of days. The department sets the real days.",
+  "reply_banner": "DRAFT - NOT SENT - NOT AN OFFICIAL GOVERNMENT REPLY - FOR REVIEW BY THE DEPARTMENT BEFORE ANY USE",
+  "classifier_intro": "You classify a citizen's grievance for the Goa administration (English or Konkani).",
+  "owners": {
+    "water_section": "Drinking water section office (PWD water supply)",
+    "roads_section": "Roads and streetlights section office",
+    "health_unit": "Hospital administration (health centre or district hospital)",
+    "sanitation_section": "Local body sanitation section (City Corporation, municipal council or village panchayat)",
+    "police_station": "Police station (station-level officer)",
+    "grievance_cell": "Grievance Cell, Collectorate"
+  },
+  "helplines": {
+    "complaint_cell_24x7": "112",
+    "toll_free": "112",
+    "cyber_crime": "1930"
+  },
+  "helpline_text": "In an emergency call 112. For online financial fraud also call the national cybercrime helpline 1930 as soon as possible.",
+  "escalation_matrix": {
+    "standard": {
+      "depot": 2,
+      "deputy_ae": 2,
+      "area_engineer": 2,
+      "superintendent_engineer": 2
+    },
+    "police": {
+      "depot": 1,
+      "deputy_ae": 2,
+      "area_engineer": 2,
+      "superintendent_engineer": 2
+    },
+    "health": {
+      "depot": 2,
+      "deputy_ae": 1,
+      "area_engineer": 1,
+      "superintendent_engineer": 1
+    }
+  },
+  "complaint_types": {
+    "no_water_supply": {
+      "label": "No drinking water supply",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "water_leakage": {
+      "label": "Water pipe leakage",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "water_pollution": {
+      "label": "Dirty or contaminated water",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "handpump_repair": {
+      "label": "Hand pump or borewell repair",
+      "field": "water",
+      "owner": "water_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "road_damage": {
+      "label": "Damaged road or pothole",
+      "field": "roads",
+      "owner": "roads_section",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "streetlight_fault": {
+      "label": "Streetlight not working",
+      "field": "roads",
+      "owner": "roads_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "hospital_service": {
+      "label": "Hospital service problem",
+      "field": "health",
+      "owner": "health_unit",
+      "escalation_key": "health",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "garbage_sanitation": {
+      "label": "Garbage and sanitation",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "drainage_blockage": {
+      "label": "Blocked drain or sewer",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "property_tax_billing": {
+      "label": "Tax, bill or charges",
+      "field": "sanitation",
+      "owner": "sanitation_section",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    },
+    "cybercrime": {
+      "label": "Cybercrime and online fraud",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "financial_fraud": {
+      "label": "Financial fraud",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 1,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "lost_property": {
+      "label": "Lost property",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "traffic_safety": {
+      "label": "Public safety and traffic",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 2,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "complaint_individuals": {
+      "label": "Complaint involving individuals",
+      "field": "police",
+      "owner": "police_station",
+      "escalation_key": "police",
+      "fix_days": 3,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo.",
+      "notice": "This system only registers and tracks the complaint. Whether an offence took place, and whether an FIR is registered, is decided only by authorised police officials."
+    },
+    "general_grievance": {
+      "label": "General grievance",
+      "field": "general",
+      "owner": "grievance_cell",
+      "escalation_key": "standard",
+      "fix_days": 7,
+      "fix_note": "Sample timeline for the demo. The department sets its real timeline.",
+      "charter_row": "Sample timeline set by the project team for the Goa demo."
+    }
+  },
+  "state": "Goa",
+  "category_types": {
+    "water_supply": [
+      "no_water_supply",
+      "water_leakage",
+      "water_pollution",
+      "handpump_repair"
+    ],
+    "drainage_sewerage": [
+      "drainage_blockage"
+    ],
+    "garbage_sanitation": [
+      "garbage_sanitation"
+    ],
+    "roads_footpaths": [
+      "road_damage"
+    ],
+    "streetlights": [
+      "streetlight_fault"
+    ],
+    "flooding_waterlogging": [
+      "drainage_blockage"
+    ],
+    "public_health_strays": [
+      "hospital_service",
+      "garbage_sanitation"
+    ],
+    "municipal_services_taxes": [
+      "property_tax_billing"
+    ]
+  },
+  "category_types_note": "When the citizen picks one of these not-emergency categories, the type is chosen from the listed types. If the text matches one of them it is used; otherwise the first one is.",
+  "konkani_names": {
+    "No drinking water supply": "पियेवेचें उदक पुरवण ना",
+    "Water pipe leakage": "उदकाच्या पायपांतल्यान गळती",
+    "Dirty or contaminated water": "घाण वा दुखावलें उदक",
+    "Hand pump or borewell repair": "हातपंप वा बोरवेल दुरुस्ती",
+    "Damaged road or pothole": "मोडिल्लो रस्तो वा खळगो",
+    "Streetlight not working": "रस्त्यावयलो दिवो चालू ना",
+    "Hospital service problem": "इस्पितळाच्या सेवेची समस्या",
+    "Garbage and sanitation": "कचरो आनी स्वच्छताय",
+    "Blocked drain or sewer": "बंद जाल्लें गटार वा सांडपाणी",
+    "Tax, bill or charges": "कर, बिल वा शुल्क",
+    "Cybercrime and online fraud": "सायबर गुन्हो आनी ऑनलायन फसवणूक",
+    "Financial fraud": "आर्थिक फसवणूक",
+    "Lost property": "हरयिल्ली वस्तू",
+    "Public safety and traffic": "सार्वजनीक सुरक्षा आनी वाहतूक",
+    "Complaint involving individuals": "व्यक्तींविशीं तक्रार",
+    "General grievance": "सर्वसादारण तक्रार",
+    "Drinking water": "पियेवेचें उदक",
+    "Roads and streetlights": "रस्ते आनी रस्त्यावयले दिवे",
+    "Health and hospitals": "आरोग्य आनी इस्पितळां",
+    "Sanitation, drains and local taxes": "स्वच्छताय, गटारां आनी स्थानीक कर",
+    "Police (pilot)": "पोलीस (प्रयोगीक)",
+    "General grievances": "सर्वसादारण तक्रारी",
+    "Drinking water section office (PWD water supply)": "पियेवेचें उदक विभाग कार्यालय (सार्वजनीक बांधकाम खातें)",
+    "Roads and streetlights section office": "रस्ते आनी रस्त्यावयले दिवे विभाग कार्यालय",
+    "Hospital administration (health centre or district hospital)": "इस्पितळ प्रशासन (आरोग्य केंद्र वा जिल्हा इस्पितळ)",
+    "Local body sanitation section (City Corporation, municipal council or village panchayat)": "स्थानीक संस्थेचो स्वच्छताय विभाग (महानगरपालिका, नगरपालिका वा गांव पंचायत)",
+    "Police station (station-level officer)": "पोलीस ठाणें (ठाणें पातळेचो अधिकारी)",
+    "Grievance Cell, Collectorate": "तक्रार विभाग, जिल्हाधिकारी कार्यालय",
+    "Section or station-level officer": "विभाग वा ठाणें पातळेचो अधिकारी",
+    "Sub-division officer": "उपविभाग अधिकारी",
+    "Division officer": "विभागीय अधिकारी",
+    "District-level department head": "जिल्हा पातळेचो खात्याचो मुखेली",
+    "Collectorate (District Head Office)": "जिल्हाधिकारी कार्यालय (जिल्हा मुखेल कार्यालय)",
+    "Ward or taluka office": "वॉर्ड वा तालुको कार्यालय",
+    "the field office": "क्षेत्र कार्यालय",
+    "Panaji City": "पणजी शार",
+    "Bardez": "बार्देस",
+    "Pernem": "पेडणें",
+    "Bicholim": "डिचोली",
+    "Sattari": "सत्तरी",
+    "Ponda": "फोंडा",
+    "Mormugao": "मुरगांव",
+    "Salcete": "सासष्टी",
+    "Quepem": "केपें",
+    "Sanguem": "सांगे",
+    "Canacona": "काणकोण",
+    "Dharbandora": "धारबांदोडो"
+  },
+  "konkani_names_note": "Konkani names (Devanagari) for the labels above. A first draft that a native Konkani speaker should review. Used in Konkani messages and on the citizen pages."
+}
