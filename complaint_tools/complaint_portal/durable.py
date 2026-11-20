@@ -13,6 +13,7 @@ host asks the service to stop.
 
 import io
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -21,7 +22,18 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import unquote, urlsplit
 
-TABLE = "portal_snapshot"
+DEFAULT_TABLE = "portal_snapshot"
+
+
+def _table_name() -> str:
+    """The table that holds the copy. Two portals can share one free database by each setting SNAPSHOT_TABLE."""
+    name = (os.environ.get("SNAPSHOT_TABLE") or "").strip() or DEFAULT_TABLE
+    if not re.fullmatch(r"[a-z][a-z0-9_]{0,40}", name):
+        raise ValueError("SNAPSHOT_TABLE may only hold lower-case letters, digits and underscores.")
+    return name
+
+
+TABLE = _table_name()
 PHOTO_LIMIT_BYTES = 60_000_000   # photos beyond this total are left out of the copy; the database itself always goes
 
 

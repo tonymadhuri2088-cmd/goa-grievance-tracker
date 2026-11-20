@@ -94,3 +94,19 @@ def test_no_page_or_script_still_shows_kannada_or_kalaburagi():
             if KANNADA.search(text) or "Kalaburagi" in text or "Kannada" in text:
                 leftovers.append(str(path.relative_to(ROOT)))
     assert leftovers == []
+
+
+def test_two_portals_can_share_one_database_with_their_own_table(monkeypatch):
+    from complaint_portal import durable
+    monkeypatch.delenv("SNAPSHOT_TABLE", raising=False)
+    assert durable._table_name() == "portal_snapshot"          # Kalaburagi keeps its table
+    monkeypatch.setenv("SNAPSHOT_TABLE", "goa_snapshot")
+    assert durable._table_name() == "goa_snapshot"
+    monkeypatch.setenv("SNAPSHOT_TABLE", "x; drop table y")
+    with pytest.raises(ValueError):
+        durable._table_name()
+
+
+def test_the_goa_blueprint_shares_the_existing_free_database_in_its_own_table():
+    text = (ROOT / "render.yaml").read_text()
+    assert "databases:" not in text and "kalaburagi-data" in text and "goa_snapshot" in text

@@ -1,14 +1,11 @@
-# Render Blueprint: one free web service built from the Dockerfile, plus a free Postgres database.
+# Render Blueprint: one free web service built from the Dockerfile. It does not create a database: Render allows one free
+# database per account, so this service shares the existing free one (kalaburagi-data) and keeps its copy in its own
+# table (SNAPSHOT_TABLE=goa_snapshot), leaving the other portal's data alone. To use its own database instead, add a
+# database block as in the Kalaburagi repo and point DATABASE_URL at it.
 # On Render: New > Blueprint > pick this repository. Render asks for DEMO_PASSWORD.
 # The free web plan has no disk, so the portal keeps a copy of its data in the Postgres database (DATABASE_URL, see
 # complaint_tools/complaint_portal/durable.py) and restores it after every restart. The free database lasts 30 days.
 # SEED_SAMPLE=1 adds invented demo data the first time only. It is off (0), and each start removes any invented data.
-databases:
-  - name: goa-data
-    plan: free
-    databaseName: portal
-    user: portal
-    ipAllowList: []   # only services inside Render can connect
 services:
   - type: web
     name: goa-grievance-tracker
@@ -18,8 +15,10 @@ services:
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: goa-data
+          name: kalaburagi-data
           property: connectionString
+      - key: SNAPSHOT_TABLE
+        value: goa_snapshot
       - key: DEMO_PASSWORD
         sync: false
       - key: SEED_SAMPLE
